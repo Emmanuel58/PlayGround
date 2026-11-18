@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>BLACKWOOD // SURVIVAL HORROR</title>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#050607;font-family:Georgia,'Times New Roman',serif;color:#d8d1c2}canvas{display:block;width:100%;height:100%}
+#ui{position:fixed;inset:0;pointer-events:none}#grain{position:absolute;inset:-50%;opacity:.12;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");animation:grain .18s steps(2) infinite}@keyframes grain{0%{transform:translate(3%,2%)}25%{transform:translate(-4%,4%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-2%)}100%{transform:translate(4%,3%)}}
+#hud{position:absolute;left:max(22px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));width:260px;text-shadow:0 2px 4px #000}.bars{height:45px;display:flex;align-items:flex-end;gap:8px}.vital{height:10px;border:1px solid #b8b1a0;width:170px;overflow:hidden;position:relative}.vital i{display:block;height:100%;width:100%;background:#a8a56e;box-shadow:0 0 12px #d9d49a}.vital.warn i{background:#ad4b39}.label{font:11px Arial,sans-serif;letter-spacing:3px;margin:7px 0 5px;color:#aaa391}.inventory{display:flex;gap:8px}.slot{width:42px;height:42px;border:1px solid rgba(190,184,168,.38);background:rgba(10,12,11,.72);display:grid;place-items:center;font:16px Arial}.slot.active{border-color:#c9c1aa;box-shadow:inset 0 0 12px rgba(200,190,160,.12)}
+#ammo{position:absolute;right:max(22px,env(safe-area-inset-right));bottom:max(22px,env(safe-area-inset-bottom));font:24px Georgia;text-align:right;text-shadow:0 2px 5px #000}#ammo small{display:block;font:9px Arial;letter-spacing:3px;color:#99927f;margin-bottom:4px}
+#prompt{position:absolute;left:50%;bottom:23%;transform:translateX(-50%);padding:8px 14px;background:rgba(5,6,6,.78);border:1px solid rgba(200,190,170,.25);font-size:14px;letter-spacing:1px;display:none}
+#title,#death,#win{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(circle,#151919cc 0,#050606 72%);pointer-events:auto}#title h1,#death h1,#win h1{margin:0;font-weight:normal;font-size:clamp(44px,9vw,110px);letter-spacing:.18em;text-indent:.18em;text-shadow:0 3px 20px #000}#title p{letter-spacing:.35em;font-size:11px;color:#a89f8b;margin:18px 0 50px}.btn{font:12px Arial;letter-spacing:4px;padding:14px 24px;border:1px solid #aaa38f;background:rgba(12,13,12,.7);color:#d8d1c2;cursor:pointer}.btn:hover{background:#25291f}
+#objectives{position:absolute;top:max(18px,env(safe-area-inset-top));left:max(22px,env(safe-area-inset-left));font:11px Arial;letter-spacing:2px;text-transform:uppercase;text-shadow:0 2px 4px #000}#objectives b{display:block;color:#beb7a4;font-family:Georgia;font-size:16px;text-transform:none;letter-spacing:1px;margin-top:5px}#subtitle{position:absolute;left:50%;top:68%;transform:translateX(-50%);font-size:19px;letter-spacing:2px;text-shadow:0 2px 8px #000;text-align:center;width:80%;display:none}
+#crosshair{position:absolute;left:50%;top:50%;width:5px;height:5px;border:1px solid rgba(220,215,195,.8);border-radius:50%;transform:translate(-50%,-50%)}
+#touch{display:none;position:absolute;inset:0}#stick,#look{position:absolute;bottom:75px;width:120px;height:120px;border-radius:50%;border:1px solid rgba(220,210,180,.18);background:rgba(255,255,255,.025)}#stick{left:20px}#look{right:20px}#stick i,#look i{position:absolute;width:46px;height:46px;border-radius:50%;left:36px;top:36px;background:rgba(210,205,185,.14)}
+.hidden{display:none!important}@media(pointer:coarse){#touch{display:block}.inventory{display:none}#hud{width:170px}#objective{font-size:9px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui"><div id="grain"></div><div id="crosshair"></div><div id="objectives">INVESTIGACIÓN<b id="objective">Encuentra la llave del sótano</b></div>
+<div id="hud"><div class="label">ESTADO</div><div class="bars"><div class="vital" id="health"><i></i></div></div><div class="inventory"><div class="slot active">P</div><div class="slot" id="healSlot">✚</div><div class="slot" id="ammoSlot">•</div></div></div>
+<div id="ammo"><small>PISTOLA</small><span id="bullets">8</span> / <span id="reserve">16</span></div><div id="prompt"></div><div id="subtitle"></div>
+<div id="title"><h1>BLACKWOOD</h1><p>UNA PESADILLA SIN SALIDA</p><button class="btn" id="start">DESPERTAR</button></div><div id="death" class="hidden"><h1>MUERTA</h1><p>La casa conserva tu nombre.</p><button class="btn" id="restart">REINTENTAR</button></div><div id="win" class="hidden"><h1>FIN</h1><p>Pero algo ha quedado atrás.</p><button class="btn" id="again">VOLVER A ENTRAR</button></div>
+<div id="touch"><div id="stick"><i></i></div><div id="look"><i></i></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+const $=s=>document.querySelector(s), canvas=$('#game');
+let renderer,scene,camera,clock,started=false,ended=false;
+let hp=100,ammo=8,reserve=16,heals=2,keys=false,finalDoor=false,flashOn=false;
+const player={x:0,z:8,y:1.65,yaw:0,pitch:-.04}; const enemies=[]; const colliders=[];
+const pressed={};
+function mat(c,r=.8){return new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:.05})}
+function box(x,y,z,w,h,d,m){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);scene.add(o);return o}
+function init(){
+ renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x070909);scene.fog=new THREE.FogExp2(0x080909,.038);camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.05,80);clock=new THREE.Clock();
+ // floor and worn manor shell
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(28,36,12,12),mat(0x20211d));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+ box(0,2,-17,28,4,.5,mat(0x151817));box(0,2,17,28,4,.5,mat(0x151817));box(-14,2,0,.5,4,34,mat(0x151817));box(14,2,0,.5,4,34,mat(0x151817));
+ // corridors / walls
+ const wallM=mat(0x282923);[[0,0,8,14,6],[0,0,-8,14,6],[-7,0,0,6,10],[7,0,0,6,10],[-3,0,-13,4,7],[4,0,-13,5,7]].forEach(v=>{box(v[0],1.8,v[1],v[2],3.6,v[3],wallM);colliders.push({x:v[0],z:v[1],w:v[2]/2+.35,d:v[3]/2+.35})});
+ // remove corridor illusion via openings / pillars
+ box(-10,1.5,-10,3,3,3,mat(0x171915));box(10,1.5,-10,3,3,3,mat(0x171915));box(-10,1.5,10,3,3,3,mat(0x171915));box(10,1.5,10,3,3,3,mat(0x171915));
+ // furniture
+ for(let i=0;i<18;i++){let x=-12+(i*7)%24,z=-14+(i*11)%28;if(Math.abs(x)<2&&z>5)continue;box(x,.35,z,1.2+(i%3)*.25,.7,.55,mat(0x1c1b17));colliders.push({x,z,w:.8,d:.5})}
+ // door, key, ammo, medkit
+ const door=box(0,1.8,-16.2,3.2,3.6,.25,mat(0x32261d));door.userData.final=true; window.finalDoor=door;
+ const key=new THREE.Mesh(new THREE.OctahedronGeometry(.12),mat(0xaaa16b));key.position.set(-11,1,13);scene.add(key);window.keyObj=key;
+ [ [11,1,-12],[11,1,13],[-11,1,-5] ].forEach(p=>{let a=new THREE.Mesh(new THREE.BoxGeometry(.25,.08,.12),mat(0xa8a27f));a.position.set(...p);a.rotation.z=.3;scene.add(a);a.userData.ammo=true;window[a.uuid]=a});
+ [ [12,.5,4],[-12,.5,-12] ].forEach(p=>{let a=new THREE.Mesh(new THREE.BoxGeometry(.55,.18,.35),mat(0x7d1711));a.position.set(...p);scene.add(a);a.userData.med=true;window[a.uuid]=a});
+ // lighting
+ scene.add(new THREE.HemisphereLight(0x7a7d73,0x080807,.12));let moon=new THREE.DirectionalLight(0x98aaa6,.32);moon.position.set(-5,12,4);moon.castShadow=true;scene.add(moon);
+ window.flash=new THREE.SpotLight(0xe7dba7,3.5,18,.32,.55,1);scene.add(window.flash);scene.add(window.flash.target);
+ // enemies
+ for(const p of [[-10,-10],[9,-6],[0,-13],[10,10],[-9,7]])spawnEnemy(p[0],p[1]);
+ camera.position.set(0,player.y,player.z); updateCamera(); animate();
+}
+function spawnEnemy(x,z){const g=new THREE.Group();const body=new THREE.Mesh(new THREE.CapsuleGeometry(.38,1.05,4,8),mat(0x171918));body.position.y=.95;g.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.32,12,8),mat(0x8f9280));head.position.y=1.82;g.add(head);g.position.set(x,0,z);scene.add(g);enemies.push({group:g,hp:60,hit:0,cool:0})}
+function updateCamera(){camera.position.set(player.x,player.y,player.z);camera.rotation.order='YXZ';camera.rotation.y=player.yaw;camera.rotation.x=player.pitch;window.flash.position.copy(camera.position);window.flash.target.position.set(player.x-Math.sin(player.yaw)*5,1.2,player.z-Math.cos(player.yaw)*5);}
+function blocked(nx,nz){if(nx<-12.8||nx>12.8||nz<-15.8||nz>15.8)return true;return colliders.some(c=>Math.abs(nx-c.x)<c.w&&Math.abs(nz-c.z)<c.d)}
+function move(dt){let f=(pressed.KeyW||touchY<-.15?1:0)-(pressed.KeyS||touchY>.15?1:0);let s=(pressed.KeyD?1:0)-(pressed.KeyA?1:0);if(touchX)s+=touchX;if(f||s){let sp=3.1*dt,ca=Math.cos(player.yaw),sa=Math.sin(player.yaw);let dx=(s*ca-f*sa)*sp,dz=(-s*sa-f*ca)*sp;if(!blocked(player.x+dx,player.z))player.x+=dx;if(!blocked(player.x,player.z+dz))player.z+=dz}}
+function shoot(){if(!started||ended||ammo<=0)return;ammo--;$('#bullets').textContent=ammo;renderer.domElement.animate([{filter:'brightness(2)'},{filter:'brightness(1)'}],{duration:80});flashOn=true;setTimeout(()=>flashOn=false,60);window.flash.intensity=12;setTimeout(()=>window.flash.intensity=flashOn?12:3.5,80);
+ let dir=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));let ray=new THREE.Raycaster(camera.position,dir,.0,30);let hits=ray.intersectObjects(enemies.map(e=>e.group.children).flat(),true);if(hits.length){let g=hits[0].object.parent;let e=enemies.find(x=>x.group===g);if(e){e.hp-=34;e.hit=.12;if(e.hp<=0){scene.remove(e.group);e.dead=true}}}}
+function interact(){if(Math.abs(keyObj.position.x-player.x)<1.5&&Math.abs(keyObj.position.z-player.z)<1.5&&!keys){keys=true;scene.remove(keyObj);subtitle('Llave del sótano obtenida');$('#objective').textContent='Abre la puerta del sótano';}
+ if(keys&&finalDoor&&Math.abs(player.z-(-16.2))<1.5&&Math.abs(player.x)<3){ended=true;$('#win').classList.remove('hidden')}
+ scene.children.filter(o=>o.userData.ammo).forEach(o=>{if(o.position.distanceTo(camera.position)<1.5){reserve+=4;ammo=Math.min(ammo+2,8);scene.remove(o);o.userData.ammo=false;subtitle('Munición encontrada')}})
+ scene.children.filter(o=>o.userData.med).forEach(o=>{if(o.position.distanceTo(camera.position)<1.5){heals++;scene.remove(o);o.userData.med=false;subtitle('Botiquín encontrado')}})
+}
+function subtitle(t){let s=$('#subtitle');s.textContent=t;s.style.display='block';clearTimeout(s.timer);s.timer=setTimeout(()=>s.style.display='none',2300)}
+function updateEnemies(dt){for(const e of enemies){if(e.dead)continue;let dx=player.x-e.group.position.x,dz=player.z-e.group.position.z,d=Math.hypot(dx,dz);if(d<13){let ang=Math.atan2(dx,dz);e.group.rotation.y=ang;if(d>1.1){let nx=e.group.position.x+Math.sin(ang)*dt*.9,nz=e.group.position.z+Math.cos(ang)*dt*.9;if(!blocked(nx,nz)){e.group.position.x=nx;e.group.position.z=nz}}else if(e.cool<=0){e.cool=1.2;hp-=12;$('#health i').style.width=hp+'%';if(hp<35)$('#health').classList.add('warn');if(hp<=0){ended=true;$('#death').classList.remove('hidden')}}}
+ e.cool-=dt;if(e.hit>0)e.hit-=dt;if(e.hit>0)e.group.children[0].material.emissive=new THREE.Color(0x5a1717);else e.group.children[0].material.emissive=new THREE.Color(0x000000)}}
+function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.05);if(started&&!ended){move(dt);updateEnemies(dt);interact();updateCamera();$('#bullets').textContent=ammo;if(ammo===0&&reserve>0&&pressed.KeyR){ammo=8;reserve-=8}}
+ renderer.render(scene,camera)}
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+window.addEventListener('keydown',e=>{pressed[e.code]=true;if(e.code==='KeyE')interact();if(e.code==='KeyF')shoot();if(e.code==='KeyH'&&heals&&hp<100){heals--;hp=Math.min(100,hp+45);$('#health i').style.width=hp+'%';$('#health').classList.remove('warn');subtitle('Primeros auxilios')}});window.addEventListener('keyup',e=>pressed[e.code]=false);canvas.addEventListener('mousedown',e=>{if(e.button===0)shoot()});canvas.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas){player.yaw-=e.movementX*.002;player.pitch-=e.movementY*.0017;player.pitch=Math.max(-.7,Math.min(.6,player.pitch))}});canvas.addEventListener('click',()=>{if(started&&innerWidth>900)canvas.requestPointerLock()});
+$('#start').onclick=()=>{started=true;$('#title').classList.add('hidden');canvas.requestPointerLock?.();subtitle('Encuentra una llave. Vigila tu espalda.')};$('#restart').onclick=()=>location.reload();$('#again').onclick=()=>location.reload();
+let touchX=0,touchY=0,lookTouch=null;
+$('#stick').addEventListener('touchmove',e=>{e.preventDefault();let r=$('#stick').getBoundingClientRect(),t=e.changedTouches[0];touchX=(t.clientX-(r.left+r.width/2))/60;touchY=(t.clientY-(r.top+r.height/2))/60},{passive:false});$('#stick').addEventListener('touchend',()=>{touchX=0;touchY=0});
+$('#look').addEventListener('touchmove',e=>{e.preventDefault();let t=e.changedTouches[0];if(lookTouch)player.yaw-=((t.clientX-lookTouch.x)*.006);lookTouch={x:t.clientX,y:t.clientY};player.pitch=Math.max(-.6,Math.min(.55,player.pitch-(t.clientY-lookTouch.y)*.004))},{passive:false});$('#look').addEventListener('touchstart',e=>{let t=e.changedTouches[0];lookTouch={x:t.clientX,y:t.clientY}});$('#look').addEventListener('touchend',()=>lookTouch=null);
+canvas.addEventListener('touchstart',e=>{if(started&&e.touches.length===1)shoot()},{passive:true});
+init();
+</script>
+</body>
+</html>

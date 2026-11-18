@@ -12,7 +12,7 @@ function reset(){player={x:0,y:180,angle:0,hp:100,radius:15,inv:0,walk:0};enemie
   for(let i=0;i<13;i++)props.push({type:i%3?'crate':'hay',x:(i*173%900)-450,y:(i*229%650)-310,r:18+(i%3)*3});
   for(let i=0;i<5;i++)spawnWave(i);updateHUD();
 }
-function spawnWave(extra=0){const count=5+wave*3+extra;for(let i=0;i<count;i++){let a=Math.random()*Math.PI*2,r=520+Math.random()*180;enemies.push({x:Math.cos(a)*r,y:Math.sin(a)*r,hp:wave>2&&i%4===0?3:2,max:wave>2&&i%4===0?3:2,radius:13,speed:.55+Math.random*.28+wave*.05,hit:0,attack:0,kind:i%7===0?'chainsaw':'villager',rot:a})}}
+function spawnWave(extra=0){const count=5+wave*2+(extra>0?1:0);for(let i=0;i<count;i++){let a=Math.random()*Math.PI*2,r=520+Math.random()*180;enemies.push({x:Math.cos(a)*r,y:Math.sin(a)*r,hp:wave>2&&i%4===0?3:2,max:wave>2&&i%4===0?3:2,radius:13,speed:.55+Math.random*.28+wave*.05,hit:0,attack:0,kind:i%7===0?'chainsaw':'villager',rot:a})}}
 function start(){reset();started=true;menu.style.display='none';over.style.display='none';hud.style.display='block';touch.style.display='';last=performance.now();requestAnimationFrame(loop)}
 document.getElementById('start').onclick=start;document.getElementById('again').onclick=start;
 document.getElementById('how').onclick=()=>toast('WASD move • Mouse aim/fire • R reload • Survive 3 waves',4000);

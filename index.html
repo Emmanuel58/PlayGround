@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>UMBRA-03</title>
+<style>
+:root{--green:#a2b39a;--cyan:#75c9cb;--amber:#c8ae70}
+*{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050606;color:#d2d5cf;font-family:"Courier New",monospace}
+#game{position:relative;width:100%;height:100%;background:#080909}
+canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+#vignette{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 160px 55px #000,inset 0 0 35px #000}
+#grain{position:absolute;inset:-20%;opacity:.08;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");animation:noise .18s steps(2) infinite}@keyframes noise{0%{transform:translate(0)}25%{transform:translate(3%, -2%)}50%{transform:translate(-2%,4%)}75%{transform:translate(4%,2%)}}
+#hud{position:absolute;left:22px;top:18px;width:250px;padding:10px 12px;border:1px solid rgba(117,201,203,.25);background:rgba(8,12,12,.72);font-size:13px;text-shadow:1px 1px #000}
+#hud b{color:var(--cyan);letter-spacing:2px}.bar{height:7px;margin:7px 0 8px;border:1px solid #50615d;background:#111}.bar i{display:block;width:100%;height:100%;background:linear-gradient(90deg,#7da88c,#bccf9e)}
+#objective{position:absolute;right:22px;top:18px;width:min(360px,42vw);text-align:right;color:#adb9b2;font-size:13px;line-height:1.5;text-shadow:1px 1px #000}#objective span{color:var(--amber)}
+#dialog{position:absolute;left:50%;bottom:48px;transform:translateX(-50%);width:min(780px,calc(100% - 40px));min-height:112px;padding:18px 24px;border:2px solid #87928a;background:rgba(5,7,7,.94);box-shadow:0 0 0 3px #151918,0 12px 40px #000;font-size:16px;line-height:1.45;display:none}#dialog .name{color:var(--cyan);font-weight:bold;margin-bottom:8px}
+#prompt{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);display:none;padding:7px 12px;background:rgba(0,0,0,.75);border:1px solid #68756d;font-size:12px;color:#d8d2b1}
+#map{position:absolute;right:22px;bottom:22px;width:150px;height:110px;border:1px solid rgba(117,201,203,.22);background:rgba(5,8,8,.65);padding:6px;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(4,1fr);gap:3px}#map i{border:1px solid #384440}#map i.on{background:#68827b;border-color:#9fc9bd}#map i.pos{background:#bce0cf;box-shadow:0 0 8px #78bbae}
+#touch{display:none;position:absolute;inset:0;pointer-events:none}.stick,.action{pointer-events:auto;position:absolute;border:1px solid rgba(180,210,200,.35);border-radius:50%;background:rgba(20,28,27,.45);color:#b8c9c1;text-align:center;user-select:none}.stick{left:20px;bottom:24px;width:112px;height:112px}.stick:after{content:'•••';position:absolute;left:45px;top:38px;font-size:20px}.action{right:24px;bottom:36px;width:78px;height:78px;line-height:78px}.run{right:112px!important;bottom:124px!important;width:58px;height:58px;line-height:58px}
+#title{position:absolute;inset:0;z-index:10;background:radial-gradient(ellipse at center,#18201e 0,#080a09 55%,#000 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}#title h1{font-size:clamp(42px,9vw,92px);letter-spacing:.22em;margin:0 0 4px;color:#aab9b1;text-shadow:5px 5px #111}#title h2{font-size:12px;letter-spacing:.55em;color:#8e9a93;margin:0 0 60px}.blink{animation:blink 1.2s steps(2) infinite}@keyframes blink{50%{opacity:.2}}#title small{color:#65716b}
+@media(max-width:700px),(pointer:coarse){#touch{display:block}#hud{left:12px;top:10px;width:180px;font-size:11px}#objective{right:12px;top:10px;width:200px;font-size:11px}#map{display:none}#dialog{bottom:150px;font-size:13px;padding:12px 16px}}
+</style></head>
+<body><div id="game"><canvas id="c"></canvas><div id="vignette"></div><div id="grain"></div>
+<div id="hud"><b>DR. EVA RÖMER</b><div class="bar"><i id="hp"></i></div>AZUL 1 / CURACIÓN 0<br><small>SALUD</small></div>
+<div id="objective">REGISTRO CLÍNICO UMBRA-03<br><span id="obj">Encuentra la salida del sótano</span></div>
+<div id="map"></div><div id="prompt">[E] INSPECCIONAR</div><div id="dialog"><div class="name" id="speaker"></div><div id="speech"></div></div>
+<div id="touch"><div class="stick" id="stick"></div><div class="action" id="act">A</div><div class="action run" id="run">R</div></div>
+<div id="title"><h1>UMBRA</h1><h2>SUBNIVEL 03</h2><div class="blink" style="border-top:1px solid #6d7973;width:240px;padding-top:14px">PULSA PARA EMPEZAR</div><small style="margin-top:20px">ESTACIÓN CLÍNICA · 23:47</small></div>
+</div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');let W,H,DPR;function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)}addEventListener('resize',resize);resize();
+const map=[
+"111111111111",
+"100000100001",
+"101110101111",
+"100010100001",
+"111011111101",
+"100000000101",
+"101111110001",
+"100000010111",
+"111111111111"];
+const P={x:1.5,y:1.5,a:0,health:100,run:false};let keys={},started=false,dialog=null,step=0,flash=0,inventory=false,gameTime=0;
+const objects=[{x:5.5,y:1.5,type:'terminal',used:false},{x:7.5,y:5.5,type:'note',used:false},{x:10.5,y:7.5,type:'door',used:false},{x:2.5,y:5.5,type:'patient',used:false},{x:5.5,y:7.5,type:'med',used:false}];
+function talk(name,text,next){dialog={name,text,next};step=0;document.getElementById('dialog').style.display='block';document.getElementById('speaker').textContent=name;document.getElementById('speech').textContent=''}
+function advance(){if(!dialog)return;if(step<dialog.text.length){step=dialog.text.length;document.getElementById('speech').textContent=dialog.text}else{let next=dialog.next;dialog=null;document.getElementById('dialog').style.display='none';if(next)next()}}
+function update(){if(!started||dialog)return;let forward=(keys.w||keys.ArrowUp?1:0)-(keys.s||keys.ArrowDown?1:0),turn=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0);P.a+=turn*.055*(P.run?.8:1);P.run=!!keys.ShiftLeft||!!keys.ShiftRight||touchRun;let sp=(P.run?.075:.045)*(forward?1:.55);if(forward){let nx=P.x+Math.cos(P.a)*forward*sp,ny=P.y+Math.sin(P.a)*forward*sp;if(map[Math.floor(ny)]?.[Math.floor(nx)]==='0'){P.x=nx;P.y=ny}}gameTime++}
+function isWall(x,y){return map[Math.floor(y)]?.[Math.floor(x)]!=='0'}
+function ray(angle){let dist=0,side=0,hitX=0,hitY=0;for(let i=0;i<720;i++){dist=i*.004;let x=P.x+Math.cos(angle)*dist,y=P.y+Math.sin(angle)*dist;if(isWall(x,y)){let fx=x-Math.floor(x),fy=y-Math.floor(y);side=fy<.05||fy>.95?1:0;hitX=x;hitY=y;break}}return{d:dist,side,hitX,hitY}}
+function render(){ctx.fillStyle='#050707';ctx.fillRect(0,0,W,H);let horizon=H*.48,fov=Math.PI/3,cols=240;for(let i=0;i<cols;i++){let sx=i/cols*W,ang=P.a-fov/2+i/cols*fov,r=ray(ang),z=r.d*Math.cos(ang-P.a),hh=Math.min(H*1.8,H/(z+.001)*.72);let shade=Math.max(0,1-z/7)*(r.side?155:190);shade*=(.82+.18*Math.sin(r.hitX*19)*Math.sin(r.hitY*19));let y=horizon-hh/2;ctx.fillStyle=`rgb(${shade*.48},${shade*.58},${shade*.56})`;ctx.fillRect(sx,y,W/cols+1,hh);if(r.side===0)ctx.fillStyle=`rgba(0,0,0,.12)`;ctx.fillRect(sx,y,W/cols+1,hh)}
+// floor and ceiling
+a=ctx.createLinearGradient(0,horizon,0,H);a.addColorStop(0,'#101514');a.addColorStop(.7,'#080909');a.addColorStop(1,'#020303');ctx.fillStyle=a;ctx.fillRect(0,horizon,W,H-horizon);ctx.fillStyle='#070908';ctx.fillRect(0,0,W,horizon);
+// sprites
+a=Math.sin(gameTime*.025)*.6;let sprites=objects.filter(o=>!o.used||o.type==='door').map(o=>({...o,d:Math.hypot(o.x-P.x,o.y-P.y),angle:Math.atan2(o.y-P.y,o.x-P.x)-P.a}).sort((x,y)=>y.d-x.d));for(let o of sprites){let rel=Math.atan2(Math.sin(o.angle),Math.cos(o.angle));if(Math.abs(rel)>fov*.72||o.d<.25||o.d>8)continue;let sc=H/o.d*.22,x=W/2+Math.tan(rel)*W/(.74*fov)*.5,y=horizon-sc*.35;ctx.save();ctx.translate(x,y);ctx.globalAlpha=Math.max(.15,1-o.d/9);if(o.type==='terminal'||o.type==='patient'){ctx.fillStyle=o.type==='terminal'?'#263130':'#1a1a18';ctx.fillRect(-sc*.19,-sc*.75,sc*.38,sc*.75);ctx.fillStyle=o.type==='terminal'?`rgba(100,220,190,${.5+a*.2})`:'#4d5049';ctx.fillRect(-sc*.12,-sc*.55,sc*.24,sc*.28)}else if(o.type==='note'){ctx.fillStyle='#b5b092';ctx.fillRect(-sc*.14,-sc*.08,sc*.28,sc*.18);ctx.fillStyle='#34342f';ctx.fillRect(-sc*.09,-sc*.02,sc*.18,2)}else if(o.type==='door'){ctx.fillStyle='#2c3734';ctx.fillRect(-sc*.28,-sc*.9,sc*.56,sc*.9);ctx.fillStyle='#65736e';ctx.fillRect(-sc*.21,-sc*.75,sc*.42,sc*.58);ctx.fillStyle='#aa9b72';ctx.fillRect(sc*.12,-sc*.25,sc*.06,sc*.06)}else{ctx.fillStyle='#7c2e26';ctx.fillRect(-sc*.12,-sc*.52,sc*.24,sc*.52);ctx.fillStyle='#c0c0a5';ctx.fillRect(-sc*.09,-sc*.48,sc*.18,sc*.18)}ctx.restore()} 
+// red lamp pulse
+if(Math.sin(gameTime*.018)>-.7){ctx.fillStyle=`rgba(130,20,15,${.035+Math.max(0,Math.sin(gameTime*.018))* .06})`;ctx.fillRect(0,0,W,H)}requestAnimationFrame(loop)}
+function loop(){update();render();updatePrompt();}
+function updatePrompt(){if(!started||dialog)return;let near=null,min=1;for(let o of objects){let d=Math.hypot(o.x-P.x,o.y-P.y);if(d<min){min=d;near=o}}document.getElementByById('prompt').style.display=near?'block':'none'}
+function interact(){if(dialog){advance();return}if(!started)return;let near=null,min=.95;for(let o of objects){let d=Math.hypot(o.x-P.x,o.y-P.y);if(d<min){min=d;near=o}}if(!near)return;if(near.type==='note'&&!near.used){near.used=true;talk('REGISTRO 17-3','Muestra 17-3 continúa respondiendo cuando nadie dice su nombre. El sujeto insiste en que EVA todavía está viva.') }else if(near.type==='terminal'&&!near.used){near.used=true;talk('TERMINAL CLÍNICO','PROYECTO UMBRA // CÓDIGO 4-3-0\nAcceso autorizado. Cámara de observación: puerta sellada.') }else if(near.type==='patient'&&!near.used){near.used=true;talk('SUJETO ACOSTADO','La figura abre los ojos. “No viniste a salvarme”, susurra. “Viniste a cerrar el circuito.”')}else if(near.type==='med'&&!near.used){near.used=true;P.health=Math.min(100,P.health+30);document.getElementById('hp').style.width=P.health+'%';talk('EVA RÖMER','Encontraste una dosis azul. Tu reflejo en el frasco sonríe medio segundo tarde.') }else if(near.type==='door'&&!near.used){near.used=true;talk('PUERTA DEL ASCENSOR','El elevador no responde. Desde el fondo se oye el número tres pronunciado por tu propia voz.',()=>{document.getElementById('obj').textContent='Inicia el procedimiento de emergencia'})}}
+addEventListener('keydown',e=>{keys[e.key]=true;if(e.key===' '||e.key.toLower==='e')interact()});addEventListener('keyup',e=>{keys[e.key]=false});
+document.getElementById('title').addEventListener('pointerdown',()=>{started=true;document.getElementById('title').style.display='none';talk('EVANGELINA','Ubicación: Sector Subterráneo 03.\n“Eva... si escuchas esto, no confíes en las salas que recuerdas.”')});
+// minimap
+let mapEl=document.getElementById('map');for(let y=0;y<4;y++)for(let x=0;x<5;x++){let i=document.createElement('i');mapEl.appendChild(i)}function updateMap(){let cells=mapEl.children;for(let i=0;i<cells.length;i++){let mx=i%5,my=Math.floor(i/5);cells[i].className=(my*2+1<map.length&&mx*2+1<map[0].length&&map[my*2+1][mx*2+1]==='0')?'on':''}let ix=Math.min(4,Math.floor(P.x/2.4)),iy=Math.min(3,Math.floor(P.y/2.25));if(cells[iy*5+ix])cells[iy*5+ix].className='pos'}setInterval(updateMap,100);
+let touchRun=false,tx=0,ty=0;const stick=document.getElementById('stick');stick.addEventListener('pointerdown',e=>{stick.setPointerCapture(e.pointerId);tx=e.clientX;ty=e.clientY});stick.addEventListener('pointermove',e=>{if(!stick.hasPointerCapture(e.pointerId))return;let dx=e.clientX-tx,dy=e.clientY-ty;keys.w=dy<-12;keys.s=dy>12;keys.a=dx<-12;keys.d=dx>12});stick.addEventListener('pointerup',()=>{keys.w=keys.s=keys.a=keys.d=false});document.getElementById('act').addEventListener('pointerdown',e=>{e.preventDefault();interact()});document.getElementByById('run').addEventListener('pointerdown',()=>touchRun=true);document.getElementById('run').addEventListener('pointerup',()=>touchRun=false);document.getElementById('run').addEventListener('pointercancel',()=>touchRun=false);
+render();
+</script></body></html>
